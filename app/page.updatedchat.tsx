@@ -9,11 +9,13 @@ import { Upload, Send, FileText, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { FileUploadDialog } from "@/components/upload/FileUploadDialog"
 import { ChatSidebar } from "@/components/chat/ChatSidebar"
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
 
 interface Message {
   role: "user" | "assistant"
   content: string
   timestamp: Date
+  sources?: Source[]
 }
 
 interface ChatSession {
@@ -21,6 +23,12 @@ interface ChatSession {
   title: string
   messages: Message[]
   lastActivity: Date
+}
+
+interface Source {
+  document_name: string
+  retrieved_content: string
+  page_number: number
 }
 
 export default function ChatInterface() {
@@ -152,6 +160,7 @@ export default function ChatInterface() {
         role: "assistant",
         content: result.response,
         timestamp: new Date(),
+        sources: Array.isArray(result.sources) ? result.sources : undefined,
       }
 
       const finalMessages = [...newMessages, assistantMessage]
@@ -363,7 +372,6 @@ You can now ask questions about these documents!`,
               open={uploadDialogOpen}
               onOpenChange={setUploadDialogOpen}
               onUploadComplete={handleFileUpload}
-              demoMode={false}
             />
             <Button 
               variant="outline" 
@@ -462,6 +470,30 @@ You can now ask questions about these documents!`,
                     }`}
                   >
                     <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                    {message.role === "assistant" && message.sources && message.sources.length > 0 && (
+                      <div className="mt-3">
+                        <Accordion type="single" collapsible>
+                          <AccordionItem value={`sources-${index}`}>
+                            <AccordionTrigger className="text-xs">Sources</AccordionTrigger>
+                            <AccordionContent>
+                              <div className="space-y-3">
+                                {message.sources.map((src, i) => (
+                                  <div key={i} className="rounded-md border border-border bg-background p-3 text-foreground">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="font-medium text-sm break-all">{src.document_name}</div>
+                                      <div className="text-xs text-muted-foreground">Page {src.page_number}</div>
+                                    </div>
+                                    <div className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">
+                                      {src.retrieved_content}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
