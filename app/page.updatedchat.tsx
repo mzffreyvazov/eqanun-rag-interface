@@ -363,6 +363,7 @@ You can now ask questions about these documents!`,
               open={uploadDialogOpen}
               onOpenChange={setUploadDialogOpen}
               onUploadComplete={handleFileUpload}
+              demoMode={false}
             />
             <Button 
               variant="outline" 
