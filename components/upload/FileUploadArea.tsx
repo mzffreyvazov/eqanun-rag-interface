@@ -7,11 +7,10 @@ import { Button } from "@/components/ui/button"
 interface FileUploadAreaProps {
   onFilesSelected: (files: FileList) => void
   fileInputRef: React.RefObject<HTMLInputElement>
-  demoMode: boolean
   disabled?: boolean
 }
 
-export function FileUploadArea({ onFilesSelected, fileInputRef, demoMode, disabled }: FileUploadAreaProps) {
+export function FileUploadArea({ onFilesSelected, fileInputRef, disabled }: FileUploadAreaProps) {
   const [isDragOver, setIsDragOver] = useState(false)
 
   const handleDragOver = (e: DragEvent) => {
@@ -82,15 +81,10 @@ export function FileUploadArea({ onFilesSelected, fileInputRef, demoMode, disabl
                 : "Drag and drop your PDF files here, or click to browse and select files"
               }
             </p>
-            {demoMode && (
-              <p className="text-xs text-blue-500 font-medium">
-                Demo mode - files will be simulated
-              </p>
-            )}
           </div>
 
           {!isDragOver && (
-            <Button variant="outline" className="gap-2 mt-2">
+            <Button variant="outline" className="gap-2 mt-2 cursor-pointer">
               <Upload className="w-4 h-4" />
               Browse Files
             </Button>

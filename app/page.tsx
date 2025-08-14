@@ -352,7 +352,7 @@ You can now ask questions about these documents!`,
                 variant="outline" 
                 size="sm" 
                 onClick={clearAllDocuments}
-                className="gap-2 bg-transparent text-destructive hover:text-destructive"
+                className="gap-2 bg-transparent text-destructive hover:text-destructive cursor-pointer"
                 disabled={!!apiError}
               >
                 <AlertCircle className="w-4 h-4" />
@@ -367,7 +367,7 @@ You can now ask questions about these documents!`,
             <Button 
               variant="outline" 
               size="sm" 
-              className="gap-2 bg-transparent"
+              className="gap-2 bg-transparent cursor-pointer"
               onClick={() => setUploadDialogOpen(true)}
               disabled={!!apiError}
             >
@@ -420,36 +420,6 @@ You can now ask questions about these documents!`,
                 <div className="text-4xl font-semibold mb-4">What can I help you with today?</div>
                 <div className="text-muted-foreground mb-8">
                   Ask questions about your uploaded legal documents
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-                  <Card
-                    className="p-4 cursor-pointer hover:bg-accent transition-colors"
-                    onClick={() => setInput("What are the key provisions in employment law?")}
-                  >
-                    <div className="text-sm font-medium mb-2">Employment Law</div>
-                    <div className="text-xs text-muted-foreground">Ask about employment regulations and provisions</div>
-                  </Card>
-                  <Card
-                    className="p-4 cursor-pointer hover:bg-accent transition-colors"
-                    onClick={() => setInput("Explain contract termination procedures")}
-                  >
-                    <div className="text-sm font-medium mb-2">Contract Law</div>
-                    <div className="text-xs text-muted-foreground">Learn about contract terms and procedures</div>
-                  </Card>
-                  <Card
-                    className="p-4 cursor-pointer hover:bg-accent transition-colors"
-                    onClick={() => setInput("How do I resolve legal disputes?")}
-                  >
-                    <div className="text-sm font-medium mb-2">Dispute Resolution</div>
-                    <div className="text-xs text-muted-foreground">Learn about legal dispute procedures</div>
-                  </Card>
-                  <Card
-                    className="p-4 cursor-pointer hover:bg-accent transition-colors"
-                    onClick={() => setInput("What makes a contract legally binding?")}
-                  >
-                    <div className="text-sm font-medium mb-2">Contract Validity</div>
-                    <div className="text-xs text-muted-foreground">Understand contract requirements</div>
-                  </Card>
                 </div>
               </div>
             ) : (
@@ -506,6 +476,7 @@ You can now ask questions about these documents!`,
                 onClick={sendMessage}
                 disabled={loading || !input.trim() || !!apiError}
                 size="icon"
+                className="cursor-pointer"
               >
                 <Send className="w-4 h-4" />
               </Button>

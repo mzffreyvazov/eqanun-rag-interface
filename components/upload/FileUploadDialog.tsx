@@ -24,10 +24,9 @@ interface FileUploadDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onUploadComplete: (files: File[]) => Promise<void>
-  demoMode?: boolean
 }
 
-export function FileUploadDialog({ open, onOpenChange, onUploadComplete, demoMode = false }: FileUploadDialogProps) {
+export function FileUploadDialog({ open, onOpenChange, onUploadComplete }: FileUploadDialogProps) {
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [overallProgress, setOverallProgress] = useState(0)
@@ -127,10 +126,22 @@ export function FileUploadDialog({ open, onOpenChange, onUploadComplete, demoMod
   }
 
   const handleClose = () => {
-    if (!isUploading) {
-      onOpenChange(false)
-      resetUpload()
+    onOpenChange(false)
+    resetUpload()
+  }
+
+  const handleCancel = () => {
+    if (isUploading) {
+      // Force stop uploading
+      setIsUploading(false)
+      setUploadFiles(prev => prev.map(file => ({ 
+        ...file, 
+        status: "error" as const,
+        error: "Upload cancelled by user"
+      })))
     }
+    onOpenChange(false)
+    resetUpload()
   }
 
   const getStatusIcon = (status: UploadFile["status"]) => {
@@ -197,19 +208,9 @@ export function FileUploadDialog({ open, onOpenChange, onUploadComplete, demoMod
               onFilesSelected={handleFilesSelected}
               fileInputRef={fileInputRef}
               disabled={isUploading}
-              demoMode={demoMode}
             />
           ) : (
             <div className="space-y-4">
-              {isUploading && (
-                <UploadProgress 
-                  progress={overallProgress}
-                  totalFiles={uploadFiles.length}
-                  completedFiles={uploadFiles.filter(f => f.status === "completed").length}
-                  demoMode={demoMode}
-                />
-              )}
-
               <ScrollArea className="max-h-60">
                 <div className="space-y-3">
                   {uploadFiles.map((uploadFile) => (
@@ -234,7 +235,7 @@ export function FileUploadDialog({ open, onOpenChange, onUploadComplete, demoMod
                             variant="ghost"
                             size="sm"
                             onClick={() => removeFile(uploadFile.id)}
-                            className="ml-2 h-8 w-8 p-0"
+                            className="ml-2 h-8 w-8 p-0 cursor-pointer"
                           >
                             <X className="w-4 h-4" />
                           </Button>
@@ -267,7 +268,7 @@ export function FileUploadDialog({ open, onOpenChange, onUploadComplete, demoMod
                     <Button
                       variant="outline"
                       onClick={() => fileInputRef.current?.click()}
-                      className="gap-2"
+                      className="gap-2 cursor-pointer"
                     >
                       <Plus className="w-4 h-4" />
                       Add More Files
@@ -300,13 +301,13 @@ export function FileUploadDialog({ open, onOpenChange, onUploadComplete, demoMod
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={handleClose}
-              disabled={isUploading}
+              onClick={isUploading ? handleCancel : handleClose}
+              className="cursor-pointer"
             >
-              {allCompleted ? "Done" : "Cancel"}
+              {allCompleted ? "Done" : isUploading ? "Cancel Upload" : "Cancel"}
             </Button>
             {uploadFiles.length > 0 && !isUploading && !allCompleted && (
-              <Button onClick={startUpload} className="gap-2">
+              <Button onClick={startUpload} className="gap-2 cursor-pointer">
                 <Upload className="w-4 h-4" />
                 Upload {uploadFiles.length} File{uploadFiles.length !== 1 ? "s" : ""}
               </Button>

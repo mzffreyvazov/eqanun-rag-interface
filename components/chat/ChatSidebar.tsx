@@ -66,7 +66,7 @@ export function ChatSidebar({
         <div className="p-4 border-b border-sidebar-border">
           <Button
             onClick={onNewChat}
-            className="w-full justify-start gap-2 bg-sidebar-accent hover:bg-sidebar-accent/80 mb-2"
+            className="w-full justify-start gap-2 bg-primary hover:bg-primary/90 text-primary-foreground mb-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             New Chat
@@ -82,7 +82,7 @@ export function ChatSidebar({
               >
                 <Button
                   variant={index === currentSessionIndex ? "secondary" : "ghost"}
-                  className="w-full justify-start text-left h-auto p-3 text-sidebar-foreground hover:bg-sidebar-accent pr-10"
+                  className="w-full justify-start text-left h-auto p-3 text-sidebar-foreground hover:bg-sidebar-accent pr-10 cursor-pointer"
                   onClick={() => onSwitchSession(index)}
                 >
                   <MessageSquare className="w-4 h-4 mr-2 flex-shrink-0" />
@@ -93,7 +93,7 @@ export function ChatSidebar({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground transition-opacity"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground transition-opacity cursor-pointer"
                     onClick={(e) => handleDeleteClick(index, e)}
                   >
                     <Trash className="w-3 h-3" />
@@ -151,10 +151,10 @@ export function ChatSidebar({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={cancelDelete}>
+            <Button variant="outline" onClick={cancelDelete} className="cursor-pointer">
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
+            <Button variant="destructive" onClick={confirmDelete} className="cursor-pointer">
               Delete
             </Button>
           </DialogFooter>
