@@ -24,12 +24,19 @@ interface FileUploadDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onUploadComplete: (files: File[]) => Promise<void>
+  demoMode?: boolean
+  apiBaseUrl?: string
 }
 
-export function FileUploadDialog({ open, onOpenChange, onUploadComplete }: FileUploadDialogProps) {
+export function FileUploadDialog({ open, onOpenChange, onUploadComplete, demoMode, apiBaseUrl }: FileUploadDialogProps) {
+  // Accept demoMode and apiBaseUrl via props (page passes demoMode)
+  const demo = demoMode ?? false
+  const apiBaseFromProps = apiBaseUrl
+
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [overallProgress, setOverallProgress] = useState(0)
+  const [jobId, setJobId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFilesSelected = (files: FileList) => {
@@ -60,52 +67,63 @@ export function FileUploadDialog({ open, onOpenChange, onUploadComplete }: FileU
     setOverallProgress(0)
 
     try {
-      // Update all files to uploading status
-      setUploadFiles(prev => prev.map(file => ({ ...file, status: "uploading" as const })))
-
-      // Simulate upload progress for each file
-      for (let i = 0; i < uploadFiles.length; i++) {
-        const fileId = uploadFiles[i].id
-
-        // Upload phase
-        for (let progress = 0; progress <= 100; progress += 10) {
-          await new Promise(resolve => setTimeout(resolve, 100))
-          setUploadFiles(prev => prev.map(file => 
-            file.id === fileId ? { ...file, progress } : file
-          ))
+      // If demo mode is enabled, keep existing simulation
+      if (demo) {
+        setUploadFiles(prev => prev.map(file => ({ ...file, status: "uploading" as const })))
+        for (let i = 0; i < uploadFiles.length; i++) {
+          const fileId = uploadFiles[i].id
+          for (let progress = 0; progress <= 100; progress += 10) {
+            await new Promise(resolve => setTimeout(resolve, 100))
+            setUploadFiles(prev => prev.map(file => file.id === fileId ? { ...file, progress } : file))
+          }
+          setUploadFiles(prev => prev.map(file => file.id === fileId ? { ...file, status: "processing", progress: 0 } : file))
+          const processingTime = 5000
+          for (let progress = 0; progress <= 100; progress += 5) {
+            await new Promise(resolve => setTimeout(resolve, processingTime / 20))
+            setUploadFiles(prev => prev.map(file => file.id === fileId ? { ...file, progress } : file))
+          }
+          setUploadFiles(prev => prev.map(file => file.id === fileId ? { ...file, status: "completed", progress: 100 } : file))
+          setOverallProgress(((i + 1) / uploadFiles.length) * 100)
         }
 
-        // Processing phase
-        setUploadFiles(prev => prev.map(file => 
-          file.id === fileId ? { ...file, status: "processing", progress: 0 } : file
-        ))
-
-        // Simulate processing time
-        const processingTime = 5000
-        for (let progress = 0; progress <= 100; progress += 5) {
-          await new Promise(resolve => setTimeout(resolve, processingTime / 20))
-          setUploadFiles(prev => prev.map(file => 
-            file.id === fileId ? { ...file, progress } : file
-          ))
-        }
-
-        // Mark as completed
-        setUploadFiles(prev => prev.map(file => 
-          file.id === fileId ? { ...file, status: "completed", progress: 100 } : file
-        ))
-
-        // Update overall progress
-        setOverallProgress(((i + 1) / uploadFiles.length) * 100)
+        await onUploadComplete(uploadFiles.map(uf => uf.file))
+        setTimeout(() => {
+          onOpenChange(false)
+          resetUpload()
+        }, 1500)
+        return
       }
 
-      // Call the completion handler
-      await onUploadComplete(uploadFiles.map(uf => uf.file))
+      // Live API: POST to /upload/start to receive a job_id and then poll /upload/status/{job_id}
+      const base = apiBaseFromProps || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+      const formData = new FormData()
+      uploadFiles.forEach((uf) => formData.append("files", uf.file))
 
-      // Auto-close after a brief delay
-      setTimeout(() => {
-        onOpenChange(false)
-        resetUpload()
-      }, 1500)
+      // mark uploading
+      setUploadFiles(prev => prev.map(file => ({ ...file, status: "uploading" as const, progress: 0 })))
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 120000)
+
+      const response = await fetch(`${base}/upload/start`, {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null)
+        throw new Error(errorData?.detail || `HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      const newJobId = result.job_id as string
+      if (!newJobId) throw new Error("No job_id returned from /upload/start")
+
+      // store job id and let UploadProgress handle polling
+      setJobId(newJobId)
 
     } catch (error) {
       console.error("Upload failed:", error)
@@ -203,7 +221,24 @@ export function FileUploadDialog({ open, onOpenChange, onUploadComplete }: FileU
         </DialogHeader>
 
         <div className="flex-1 space-y-6 overflow-hidden">
-          {uploadFiles.length === 0 ? (
+          {jobId ? (
+            // While job is active, show centralized UploadProgress which polls the server
+            <div className="p-2">
+              <UploadProgress jobId={jobId} apiBaseUrl={apiBaseFromProps} onCompleted={async (res) => {
+                // When job completes, call parent onUploadComplete and close dialog
+                try {
+                  await onUploadComplete(uploadFiles.map(uf => uf.file))
+                } catch (e) {
+                  console.warn('onUploadComplete handler failed', e)
+                }
+                setTimeout(() => {
+                  onOpenChange(false)
+                  resetUpload()
+                  setJobId(null)
+                }, 1000)
+              }} />
+            </div>
+          ) : uploadFiles.length === 0 ? (
             <FileUploadArea
               onFilesSelected={handleFilesSelected}
               fileInputRef={fileInputRef}
@@ -289,30 +324,35 @@ export function FileUploadDialog({ open, onOpenChange, onUploadComplete }: FileU
         </div>
 
         <div className="flex justify-between items-center pt-4 border-t">
-          <div className="text-sm text-muted-foreground">
-            {uploadFiles.length > 0 && (
-              <>
-                {uploadFiles.length} file{uploadFiles.length !== 1 ? "s" : ""} selected
-                {allCompleted && " - All completed!"}
-                {hasErrors && " - Some files failed"}
-              </>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={isUploading ? handleCancel : handleClose}
-              className="cursor-pointer"
-            >
-              {allCompleted ? "Done" : isUploading ? "Cancel Upload" : "Cancel"}
-            </Button>
-            {uploadFiles.length > 0 && !isUploading && !allCompleted && (
-              <Button onClick={startUpload} className="gap-2 cursor-pointer">
-                <Upload className="w-4 h-4" />
-                Upload {uploadFiles.length} File{uploadFiles.length !== 1 ? "s" : ""}
-              </Button>
-            )}
-          </div>
+          {/* When jobId is present, keep footer empty (main UploadProgress shows state) */}
+          {!jobId ? (
+            <>
+              <div className="text-sm text-muted-foreground">
+                {uploadFiles.length > 0 && (
+                  <>
+                    {uploadFiles.length} file{uploadFiles.length !== 1 ? "s" : ""} selected
+                    {allCompleted && " - All completed!"}
+                    {hasErrors && " - Some files failed"}
+                  </>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={isUploading ? handleCancel : handleClose}
+                  className="cursor-pointer"
+                >
+                  {allCompleted ? "Done" : isUploading ? "Cancel Upload" : "Cancel"}
+                </Button>
+                {uploadFiles.length > 0 && !isUploading && !allCompleted && (
+                  <Button onClick={startUpload} className="gap-2 cursor-pointer">
+                    <Upload className="w-4 h-4" />
+                    Upload {uploadFiles.length} File{uploadFiles.length !== 1 ? "s" : ""}
+                  </Button>
+                )}
+              </div>
+            </>
+          ) : null }
         </div>
       </DialogContent>
     </Dialog>

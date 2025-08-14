@@ -35,6 +35,7 @@ export default function ChatInterface() {
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
   const [currentSessionIndex, setCurrentSessionIndex] = useState(0)
   const [demoMode, setDemoMode] = useState(true) // Start in demo mode by default
+  const [uploadAlert, setUploadAlert] = useState<string | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -249,15 +250,9 @@ export default function ChatInterface() {
 
     try {
       if (demoMode) {
-        // Add demo success message
-        const systemMessage: Message = {
-          role: "assistant",
-          content: `✅ Successfully uploaded ${pdfFiles.length} document(s) in demo mode: ${pdfFiles
-            .map((f) => f.name)
-            .join(", ")}. You can now ask questions about these documents!`,
-          timestamp: new Date(),
-        }
-        setMessages((prev) => [...prev, systemMessage])
+  // Show a simple transient alert instead of a verbose chat message
+  setUploadAlert(`✅ Successfully processed ${pdfFiles.length} file${pdfFiles.length !== 1 ? "s" : ""}.`)
+  setTimeout(() => setUploadAlert(null), 6000)
       } else {
         const formData = new FormData()
 
@@ -287,17 +282,9 @@ export default function ChatInterface() {
         // Refresh system status
         await fetchSystemStatus()
 
-        // Add system message about successful upload
-        const systemMessage: Message = {
-          role: "assistant",
-          content: `✅ ${result.message}
-Files processed: ${result.files_processed.join(", ")}
-Total documents in system: ${result.total_documents}
-
-You can now ask questions about these documents!`,
-          timestamp: new Date(),
-        }
-        setMessages((prev) => [...prev, systemMessage])
+  // Show a simple transient alert instead of a verbose chat message
+  setUploadAlert(`✅ Successfully processed ${result.files_processed?.length ?? 0} file${(result.files_processed?.length ?? 0) !== 1 ? "s" : ""}.`)
+  setTimeout(() => setUploadAlert(null), 6000)
       }
     } catch (error) {
       console.error("Upload failed:", error)
@@ -557,6 +544,12 @@ You can now ask questions about these documents!`,
         {/* Messages */}
         <ScrollArea className="flex-1 p-4">
           <div className="max-w-3xl mx-auto space-y-4">
+            {uploadAlert && (
+              <Alert>
+                <div className="font-medium text-sm">{uploadAlert}</div>
+              </Alert>
+            )}
+
             {messages.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-4xl font-semibold mb-4">What can I help you with today?</div>
